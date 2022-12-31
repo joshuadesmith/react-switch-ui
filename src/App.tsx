@@ -1,10 +1,22 @@
 import React from 'react';
 import { format } from 'date-fns';
 import Icon from '@mdi/react';
-import { mdiControllerClassic, mdiDog, mdiFileAccount, mdiGithub, mdiMessageText } from '@mdi/js';
+import {
+  mdiControllerClassic,
+  mdiDog,
+  mdiFileAccount,
+  mdiGithub,
+  mdiMessageText,
+  mdiTemperatureFahrenheit,
+  mdiThermometer,
+  mdiThermometerHigh,
+  mdiThermometerLow,
+  mdiThermometerOff
+} from '@mdi/js';
 import './App.css';
 import FeatureCard from './FeatureCard';
 import IconButton from './IconButton';
+import { OpenMeteoResponse } from './OpenMeteoResponse';
 
 interface AppProps {}
 interface AppState {
@@ -15,7 +27,7 @@ interface AppState {
 }
 
 class App extends React.Component<AppProps, AppState> {
-  readonly baseWeatherUrl = 'https://api.open-meteo.com/v1/forecast';
+  readonly weatherUrl = 'https://api.open-meteo.com/v1/forecast';
 
   state: AppState = {
     date: new Date(),
@@ -27,34 +39,47 @@ class App extends React.Component<AppProps, AppState> {
   timePoller?: NodeJS.Timer;
   weatherPoller?: NodeJS.Timer;
 
+  setDate(val: Date): void {
+    this.setState({ ...this.state, date: val });
+  }
+
+  setCoords(lat: number, lon: number) {
+    this.setState({ ...this.state, currLat: lat, currLong: lon });
+  }
+
+  setTemp(val: number) {
+    this.setState({ ...this.state, currTemp: val });
+  }
+
   componentDidMount(): void {
     // update current time every second
     this.timePoller = setInterval(() => {
       this.setState({ date: new Date() });
     }, 1000);
 
-    // fetch current weather every 10 seconds
+    // fetch current weather every 60 seconds
     setInterval(() => {
       if (this.state.currLat && this.state.currLong) {
         const lat = this.state.currLat;
         const lon = this.state.currLong;
-        fetch(`${this.baseWeatherUrl}?latitude=${lat}&longitude=${lon}&current_weather=true`)
+        fetch(
+          // eslint-disable-next-line max-len
+          `${this.weatherUrl}?latitude=${lat}&longitude=${lon}&temperature_unit=fahrenheit&current_weather=true`
+        )
           .then((response) => response.json())
-          .then((response) => console.log(response))
+          .then((json: OpenMeteoResponse) => {
+            this.setTemp(json?.current_weather?.temperature);
+          })
           .catch((err) => console.error(err));
       }
     }, 10000);
 
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition((position) => {
-        this.setState({
-          ...this.state,
-          currLat: position.coords.latitude,
-          currLong: position.coords.longitude
-        });
+        this.setCoords(position.coords.latitude, position.coords.longitude);
       });
     } else {
-      console.log('no geolocation :(');
+      console.warn('no geolocation :(');
     }
   }
 
@@ -68,6 +93,20 @@ class App extends React.Component<AppProps, AppState> {
     }
   }
 
+  getTemperatureIcon() {
+    const temp = this.state.currTemp;
+    if (temp === undefined) {
+      return mdiThermometerOff;
+    }
+    if (temp < 40) {
+      return mdiThermometerLow;
+    }
+    if (temp > 85) {
+      return mdiThermometerHigh;
+    }
+    return mdiThermometer;
+  }
+
   render() {
     return (
       <div className="App flex h-screen w-full flex-col px-8">
@@ -79,6 +118,13 @@ class App extends React.Component<AppProps, AppState> {
             <div className="flex flex-wrap content-center">{format(this.state.date, 'h : mm')}</div>
             <div className="ml-1 flex flex-wrap content-center text-xs font-thin">
               {format(this.state.date, 'a')}
+            </div>
+            <div className="ml-4">
+              <Icon path={this.getTemperatureIcon()} size={1} color="white" />
+            </div>
+            <div>{this.state.currTemp}</div>
+            <div>
+              <Icon path={mdiTemperatureFahrenheit} size={1} color="white" />
             </div>
           </div>
         </div>
