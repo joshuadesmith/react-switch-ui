@@ -1,0 +1,56 @@
+.icon-btn-wrapper {
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 1s;
+}
+
+.icon-btn-wrapper:hover {
+  background-color: var(--app-blue-primary);
+  animation: bgcolorpulse 1s ease-in-out infinite;
+}
+
+.icon-btn {
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-width: 0;
+  background-color: var(--app-grey-medium);
+  padding: 16px;
+  border-radius: 50%;
+}
+
+.icon-btn-title {
+  color: var(--app-blue-primary);
+  animation: colorpulse 1s ease-in-out infinite;
+  overflow-x: show;
+}
+
+@keyframes bgcolorpulse {
+  0% {
+    background-color: var(--app-blue-primary);
+  }
+
+  50% {
+    background-color: var(--app-blue-light);
+  }
+
+  100% {
+    background-color: var(--app-blue-primary);
+  }
+}
+
+@keyframes colorpulse {
+  0% {
+    color: var(--app-blue-primary);
+  }
+
+  50% {
+    color: var(--app-blue-light);
+  }
+
+  100% {
+    color: var(--app-blue-primary);
+  }
+}
