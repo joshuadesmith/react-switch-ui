@@ -1,6 +1,8 @@
+import { SteamGame } from './model/SteamGamesResponse';
+import { getSteamImageUrl } from './utility/SteamUtil';
+
 interface FeatureCardProps {
-  title: string;
-  color: string;
+  game?: SteamGame;
 }
 
 export default function FeatureCard(props: FeatureCardProps) {
@@ -9,13 +11,28 @@ export default function FeatureCard(props: FeatureCardProps) {
     aspectRatio: '1'
   };
 
+  const imgUrl = props.game ? getSteamImageUrl(props.game.appid) : '';
   const cardStyle: React.CSSProperties = {
-    backgroundColor: props.color
+    backgroundImage: `url(${imgUrl})`,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center'
+  };
+
+  const emptyCardStyle: React.CSSProperties = {
+    border: '1px solid #e8e8e8',
+    borderRadius: '2px'
   };
 
   return (
     <div className="mr-4 h-5/6 p-2" style={cardWrapperStyle}>
-      <div className="h-full" style={cardStyle}></div>
+      {props.game ? (
+        <div className="h-full" style={cardStyle}></div>
+      ) : (
+        <div className="flex h-full items-center justify-center" style={emptyCardStyle}>
+          <div>No Recent Games Found</div>
+        </div>
+      )}
     </div>
   );
 }

@@ -16,7 +16,9 @@ import {
 import './App.css';
 import FeatureCard from './FeatureCard';
 import IconButton from './IconButton';
-import { OpenMeteoResponse } from './OpenMeteoResponse';
+import { SteamGame } from './model/SteamGamesResponse';
+import axios from 'axios';
+import { interval, startWith, takeUntil, tap, switchMap, filter, Subject } from 'rxjs';
 
 interface AppProps {}
 interface AppState {
@@ -24,6 +26,7 @@ interface AppState {
   currLat?: number;
   currLong?: number;
   currTemp?: number;
+  games?: SteamGame[];
 }
 
 class App extends React.Component<AppProps, AppState> {
@@ -33,11 +36,9 @@ class App extends React.Component<AppProps, AppState> {
     date: new Date(),
     currLat: undefined,
     currLong: undefined,
-    currTemp: undefined
+    currTemp: undefined,
+    games: undefined
   };
-
-  timePoller?: NodeJS.Timer;
-  weatherPoller?: NodeJS.Timer;
 
   setDate(val: Date): void {
     this.setState({ ...this.state, date: val });
@@ -51,46 +52,66 @@ class App extends React.Component<AppProps, AppState> {
     this.setState({ ...this.state, currTemp: val });
   }
 
+  setGames(val: SteamGame[]) {
+    this.setState({ ...this.state, games: val });
+  }
+
+  unmount$ = new Subject();
+
+  private coordsSubject = new Subject<number[]>();
+
+  // creates a new weather poller observable when coordinates are received
+  private pollWeather$ = this.coordsSubject.asObservable().pipe(
+    filter((coords) => coords.length > 0),
+    switchMap((coords: number[]) =>
+      interval(60000).pipe(
+        startWith(0),
+        tap(() => {
+          const lat = coords[0];
+          const lon = coords[1];
+
+          axios
+            .get('/weather', { params: { lat, lon } })
+            .then((response) => this.setTemp(response.data.current_weather?.temperature))
+            .catch((err) => console.error(err.response.data));
+        }),
+        takeUntil(this.unmount$)
+      )
+    ),
+    takeUntil(this.unmount$)
+  );
+
+  // updates the current time every second
+  private updateTime$ = interval(1000).pipe(
+    startWith(0),
+    tap(() => this.setDate(new Date())),
+    takeUntil(this.unmount$)
+  );
+
   componentDidMount(): void {
-    // update current time every second
-    this.timePoller = setInterval(() => {
-      this.setState({ date: new Date() });
-    }, 1000);
-
-    // fetch current weather every 60 seconds
-    setInterval(() => {
-      if (this.state.currLat && this.state.currLong) {
-        const lat = this.state.currLat;
-        const lon = this.state.currLong;
-        fetch(
-          // eslint-disable-next-line max-len
-          `${this.weatherUrl}?latitude=${lat}&longitude=${lon}&temperature_unit=fahrenheit&current_weather=true`
-        )
-          .then((response) => response.json())
-          .then((json: OpenMeteoResponse) => {
-            this.setTemp(json?.current_weather?.temperature);
-          })
-          .catch((err) => console.error(err));
-      }
-    }, 10000);
-
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition((position) => {
-        this.setCoords(position.coords.latitude, position.coords.longitude);
+        this.coordsSubject.next([position.coords.latitude, position.coords.longitude]);
       });
     } else {
       console.warn('no geolocation :(');
     }
+
+    this.updateTime$.subscribe();
+    this.pollWeather$.subscribe();
+
+    const steamId = process.env.REACT_APP_STEAM_USER_ID;
+    const steamApiKey = process.env.REACT_APP_STEAM_API_KEY;
+
+    axios
+      .get('/games/recent', { params: { steamId, steamApiKey } })
+      .then((response) => this.setGames(response.data.response.games))
+      .catch((err) => console.error(err.response.data));
   }
 
   componentWillUnmount(): void {
-    if (this.timePoller) {
-      clearInterval(this.timePoller);
-    }
-
-    if (this.weatherPoller) {
-      clearInterval(this.weatherPoller);
-    }
+    // destroy observables
+    this.unmount$.next(null);
   }
 
   getTemperatureIcon() {
@@ -130,9 +151,9 @@ class App extends React.Component<AppProps, AppState> {
         </div>
         <div className="flex flex-grow flex-col">
           <div className="flex flex-grow items-end justify-center pb-8">
-            <FeatureCard title="card 1" color="#ff4554" />
-            <FeatureCard title="card 2" color="#00c3e3" />
-            <FeatureCard title="card 3" color="#e60012" />
+            {this.state.games?.map((game) => <FeatureCard key={game.appid} game={game} />) ?? (
+              <FeatureCard />
+            )}
           </div>
           <div className="flex h-1/6 items-start justify-center">
             <div className="mr-4">
