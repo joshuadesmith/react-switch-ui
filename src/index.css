@@ -15,6 +15,10 @@
   --app-blue-primary: #639bff;
 }
 
+#root {
+  height: 100vh;
+}
+
 body {
   margin: 0;
   font-family: 'Noto Sans JP', sans-serif;

@@ -1,11 +1,11 @@
-import { SteamGame } from './model/SteamGamesResponse';
-import { getSteamImageUrl } from './utility/SteamUtil';
+import { SteamGame } from '../../model/SteamGamesResponse';
+import { getSteamImageUrl } from '../../utility/SteamUtil';
 
-interface FeatureCardProps {
+interface GameCardProps {
   game?: SteamGame;
 }
 
-export default function FeatureCard(props: FeatureCardProps) {
+export default function GameCard(props: GameCardProps) {
   const cardWrapperStyle: React.CSSProperties = {
     padding: '2px',
     aspectRatio: '1'
